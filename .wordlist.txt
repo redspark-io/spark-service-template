@@ -1,0 +1,8 @@
+FastAPI
+pytest
+uvicorn
+pydantic
+mypy
+flake8
+isort
+pyspelling

@@ -1,0 +1,9 @@
+pytest>=8.2,<9
+pytest-cov==6.0.0
+black==25.1.0
+isort==6.0.0
+flake8==7.0.0
+mypy==1.6.1
+pre-commit==4.0.0
+pyspelling==2.9.0
+pytest-asyncio==0.25.3

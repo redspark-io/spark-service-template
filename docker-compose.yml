@@ -1,0 +1,62 @@
+services:
+  api:
+    build: .
+    command: poetry run uvicorn src.infrastructure.api.main:app --host 0.0.0.0 --reload
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - rabbitmq
+    env_file:
+      - .env
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./migrations/:/app/migrations
+    networks:
+      - spark-network
+
+  worker:
+    build: .
+    command: poetry run celery -A src.worker worker -B -l info
+    depends_on:
+      - db
+      - rabbitmq
+    env_file:
+      - .env
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+    networks:
+      - spark-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - 5672:5672
+      - 15672:15672
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - spark-network
+
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=spark_template
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - spark-network
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+
+networks:
+  spark-network:
+    driver: bridge
