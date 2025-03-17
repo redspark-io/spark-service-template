@@ -13,8 +13,8 @@ class Settings(BaseSettings):
 
     HOST_URL: str = "https://c8c1-2804-7f0-6540-737-a5a7-9835-70c0-3dd.ngrok-free.app"
 
-    REGISTRY_PASSWORD: str = os.environ.get("REGISTRY_PASSWORD", None)
-    AZURE_CREDENTIALS: str = os.environ.get("AZURE_CREDENTIALS", None)
+    REGISTRY_PASSWORD: str | None = os.environ.get("REGISTRY_PASSWORD", None)
+    AZURE_CREDENTIALS: str | None = os.environ.get("AZURE_CREDENTIALS", None)
 
     model_config = SettingsConfigDict(
         env_file=".env", case_sensitive=True, from_attributes=True
