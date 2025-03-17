@@ -1,6 +1,6 @@
 import logging
 
-from src.core.celery import CustomBaseTask, celery_app
+from src.configs.celery import CustomBaseTask, celery_app
 
 logger = logging.getLogger(__name__)
 

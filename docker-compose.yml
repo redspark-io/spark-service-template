@@ -1,7 +1,7 @@
 services:
   api:
     build: .
-    command: poetry run uvicorn src.infrastructure.api.main:app --host 0.0.0.0 --reload
+    command: poetry run uvicorn src.main:app --host 0.0.0.0 --reload
     ports:
       - "8000:8000"
     depends_on:
@@ -12,7 +12,7 @@ services:
     volumes:
       - ./src:/app/src
       - ./tests:/app/tests
-      - ./migrations/:/app/migrations
+      - ./infrastructure/:/app/infrastructure
     networks:
       - spark-network
 
