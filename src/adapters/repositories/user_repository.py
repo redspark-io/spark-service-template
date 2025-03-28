@@ -1,10 +1,11 @@
 from typing import Dict, List, Optional
 
-from src.application.ports.user_repository import UserRepository
 from src.domain.entities.user import User
+from src.domain.ports.user_port import UserPort
+from src.domain.schemas.user import UserSchema
 
 
-class InMemoryUserRepository(UserRepository):
+class UserRepository(UserPort):
     def __init__(self):
         self.users: Dict[str, User] = {}
 
@@ -14,13 +15,13 @@ class InMemoryUserRepository(UserRepository):
     async def get_all(self) -> List[User]:
         return list(self.users.values())
 
-    async def create(self, user: User) -> User:
+    async def create(self, user: UserSchema) -> User:
         if user.id is None:
             user.id = str(len(self.users) + 1)
         self.users[user.id] = user
         return user
 
-    async def update(self, user: User) -> Optional[User]:
+    async def update(self, user: UserSchema) -> Optional[User]:
         if user.id in self.users:
             self.users[user.id] = user
             return user
