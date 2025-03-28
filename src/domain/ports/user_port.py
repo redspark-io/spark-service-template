@@ -4,7 +4,7 @@ from typing import List, Optional
 from src.domain.entities.user import User
 
 
-class UserRepository(ABC):
+class UserPort(ABC):
     @abstractmethod
     async def get_by_id(self, user_id: str) -> Optional[User]:
         pass
