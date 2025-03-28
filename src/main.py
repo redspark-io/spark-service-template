@@ -2,7 +2,7 @@ import logging
 
 from fastapi import FastAPI
 
-from src.adapters.entrypoints.rest.v1 import health_check, user
+from src.adapters.entrypoints.rest.v1 import health_check, template
 
 logger = logging.getLogger("uvicorn")
 
@@ -10,4 +10,4 @@ logger = logging.getLogger("uvicorn")
 app = FastAPI()
 
 app.include_router(health_check.router, tags=["health-check"])
-app.include_router(user.router, tags=["user"])
+app.include_router(template.router, tags=["template"])
