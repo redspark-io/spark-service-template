@@ -7,7 +7,7 @@ from src.domain.schemas.template.v1beta2.template import (
 )
 
 
-def handler(data: dict):
+def handler_schemas(data: dict):
     version = data.get("apiVersion", None)
     kind = data.get("kind", None)
 
