@@ -1,7 +1,7 @@
 from pydantic import ValidationError
 import yaml
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.configs.database import get_db
@@ -20,8 +20,8 @@ async def template_validate(file: UploadFile = File(...), db: AsyncSession = Dep
         else:
             raise Exception("Invalid file type")
     except ValidationError as e:
-        raise HTTPException(status_code=400, detail=e.errors())
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=e.errors())
     except Exception as e:
-        raise HTTPException(status_code=400, detail=e.args[0])
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.args[0])
 
     return {"message": f"Successfully parserd {file.filename}"}
