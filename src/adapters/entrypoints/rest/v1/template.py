@@ -1,9 +1,9 @@
 from pydantic import ValidationError
-from sqlalchemy.engine import mock
 import yaml
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from src.adapters.repositories.template_repository import TemplateRepository
 
 from src.configs.database import get_db
 from src.domain.exceptions.template_exceptions import TemplateInvalidFileTypeException
@@ -11,51 +11,9 @@ from src.utils.template_schema_factory import create_template_schema
 
 router = APIRouter()
 
-MOCKING_PARSED_FILE = {
-    "apiVersion": "v1beta1",
-    "kind": "Template",
-    "metadata": {
-        "name": "template-test",
-        "title": "Template Test",
-        "description": "Template teste",
-        "tags": ["test", "template"],
-    },
-    "spec": {
-        "type": "service",
-        "parameters": [
-            {
-                "title": "Form 1",
-                "required": ["field1"],
-                "properties": {
-                    "field1": {
-                        "title": "Field 1",
-                        "type": "string",
-                        "description": "Field 1 description",
-                    },
-                    "field2": {
-                        "title": "Field 2",
-                        "type": "string",
-                        "description": "Field 2 description",
-                    },
-                },
-            },
-        ],
-        "steps": [
-            {
-                "id": "step1",
-                "name": "Step 1",
-                "action": "fetch:template",
-                "input": {"value1": "${value1}"},
-            },
-            {
-                "id": "step2",
-                "name": "Step 2",
-                "action": "fetch:template",
-                "input": {"value1": "${value1}"},
-            }
-        ],
-    },
-}
+def get_template_repository(db: AsyncSession = Depends(get_db)) -> TemplateRepository:
+    return TemplateRepository(db)
+
 
 @router.get("/templates/validate")
 async def template_validate(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
@@ -80,13 +38,18 @@ async def template_validate(file: UploadFile = File(...), db: AsyncSession = Dep
 
 
 @router.post("/templates/{template_id}/run")
-async def template_run(template_id: str, form: dict, db: AsyncSession = Depends(get_db)):
+async def template_run(template_id: str, form: dict, template_repository: TemplateRepository = Depends(get_template_repository)):
     """
     API POST to Run template
     """
 
-    # TODO: need recovery parsed template.yaml file from service hub, but for now mocking
-    template_schema = create_template_schema(MOCKING_PARSED_FILE) 
+    template = await template_repository.get_by_id(template_id)
+    if not template:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+
+    config: dict = template.config # type: ignore
+
+    template_schema = create_template_schema(config)
     required_fields = []
     for parameter in template_schema.spec.parameters:
         if parameter.required:
