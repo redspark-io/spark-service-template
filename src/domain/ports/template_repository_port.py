@@ -3,7 +3,7 @@ from typing import Optional
 from src.domain.entities.template import Template
 
 
-class TemplatePort(ABC):
+class TemplateRepositoryPort(ABC):
 
     def __init__(self, db):
         self.db = db
