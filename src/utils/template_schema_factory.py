@@ -7,19 +7,19 @@ from src.domain.schemas.template.v1beta2.template import (
 )
 
 
-def handler_schemas(data: dict):
+def create_template_schema(data: dict):
     version = data.get("apiVersion", None)
     kind = data.get("kind", None)
 
-    template = None
+    template_schema = None
     if kind == KindEnum.template:
         if version == "v1beta1":
-            template = TemplateSchemaV1Beta1(**data)
+            template_schema = TemplateSchemaV1Beta1(**data)
         elif version == "v1beta2":
-            template = TemplateSchemaV1Beta2(**data)
+            template_schema = TemplateSchemaV1Beta2(**data)
         else:
-            raise Exception("Unsuported version")
+            raise ValueError(f"Unsuported version {version}")
     else:
-        raise Exception("Unsuported kind")
+        raise ValueError(f"Unsuported kind {kind}")
 
-    return template
+    return template_schema
