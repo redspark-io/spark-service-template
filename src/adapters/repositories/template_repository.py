@@ -1,4 +1,5 @@
 from typing import Optional
+from uuid import UUID
 
 from fastapi import Depends
 from sqlalchemy import select
@@ -13,7 +14,7 @@ class TemplateRepository(TemplatePort):
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_by_id(self, template_id: str) -> Optional[Template]:
+    async def get_by_id(self, template_id: UUID) -> Optional[Template]:
         query = await self.db.execute(
             select(Template).where(Template.id == template_id)
         )
