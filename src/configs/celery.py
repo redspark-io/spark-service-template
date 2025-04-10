@@ -1,9 +1,11 @@
 import logging
 
 from celery import Celery, Task
-from celery.schedules import crontab
 
 from src.configs import settings
+
+# from celery.schedules import crontab
+
 
 logger = logging.getLogger(__name__)
 
@@ -19,12 +21,12 @@ celery_app.conf.update(
 
 celery_app.autodiscover_tasks(["src.adapters.entrypoints.tasks"])
 
-celery_app.conf.beat_schedule = {
-    "add-every-minute-sample-task": {
-        "task": "sample_task",
-        "schedule": crontab(),
-    },
-}
+# celery_app.conf.beat_schedule = {
+#     "add-every-minute-sample-task": {
+#         "task": "sample_task",
+#         "schedule": crontab(),
+#     },
+# }
 
 
 class CustomBaseTask(Task):
