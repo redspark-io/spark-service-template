@@ -1,1 +1,1 @@
-from . import sample_tasks
+from . import sample_tasks, template_tasks

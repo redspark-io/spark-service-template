@@ -1,22 +1,28 @@
-from pydantic import ValidationError
 import yaml
-
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.adapters.repositories.template_repository import TemplateRepository
 
+from src.adapters.entrypoints.tasks.template_tasks import step_runner_task
+from src.adapters.repositories.template_repository import (
+    TemplateRepository,
+    get_template_repository,
+)
 from src.configs.database import get_db
 from src.domain.exceptions.template_exceptions import TemplateInvalidFileTypeException
+from src.domain.schemas.user_schema import UserSchema
+from src.utils.auth import get_current_token, get_current_user
 from src.utils.template_schema_factory import create_template_schema
 
 router = APIRouter()
 
-def get_template_repository(db: AsyncSession = Depends(get_db)) -> TemplateRepository:
-    return TemplateRepository(db)
 
-
-@router.get("/templates/validate")
-async def template_validate(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
+@router.get("/api/v1/templates/validate")
+async def template_validate(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    user: UserSchema = Depends(get_current_user),
+):
     """
     API GET to Validate template
     """
@@ -28,7 +34,9 @@ async def template_validate(file: UploadFile = File(...), db: AsyncSession = Dep
         else:
             raise TemplateInvalidFileTypeException
     except ValidationError as e:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=e.errors())
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=e.errors()
+        )
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.args[0])
     finally:
@@ -37,17 +45,25 @@ async def template_validate(file: UploadFile = File(...), db: AsyncSession = Dep
     return {"message": f"Successfully parserd {file.filename}"}
 
 
-@router.post("/templates/{template_id}/run")
-async def template_run(template_id: str, form: dict, template_repository: TemplateRepository = Depends(get_template_repository)):
+@router.post("/api/v1/templates/{template_id}/run")
+async def template_run(
+    template_id: str,
+    parameters: dict,
+    template_repository: TemplateRepository = Depends(get_template_repository),
+    token: str = Depends(get_current_token),
+    user: UserSchema = Depends(get_current_user),
+):
     """
     API POST to Run template
     """
 
     template = await template_repository.get_by_id(template_id)
     if not template:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
+        )
 
-    config: dict = template.config # type: ignore
+    config: dict = template.config  # type: ignore
 
     template_schema = create_template_schema(config)
     required_fields = []
@@ -57,7 +73,7 @@ async def template_run(template_id: str, form: dict, template_repository: Templa
 
     missing_fields = []
     for required_field in required_fields:
-        if required_field not in form or not form[required_field]:
+        if required_field not in parameters or not parameters[required_field]:
             missing_fields.append(required_field)
 
     if missing_fields:
@@ -66,7 +82,8 @@ async def template_run(template_id: str, form: dict, template_repository: Templa
             detail=f"Missing required field(s): {', '.join(missing_fields)}",
         )
 
-    for step in template_schema.spec.steps:
-        print(step.id)
+    steps = [step.model_dump() for step in template_schema.spec.steps]
+
+    step_runner_task.delay(steps, parameters, token)
 
     return {"message": f"Successfully run template {template_id}"}
