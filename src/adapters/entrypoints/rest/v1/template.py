@@ -1,3 +1,5 @@
+from uuid import UUID
+
 import yaml
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import ValidationError
@@ -10,6 +12,7 @@ from src.adapters.repositories.template_repository import (
 )
 from src.configs.database import get_db
 from src.domain.exceptions.template_exceptions import TemplateInvalidFileTypeException
+from src.domain.schemas.template_schema import TemplateSchema
 from src.domain.schemas.user_schema import UserSchema
 from src.utils.auth import get_current_token, get_current_user
 from src.utils.template_schema_factory import create_template_schema
@@ -17,14 +20,56 @@ from src.utils.template_schema_factory import create_template_schema
 router = APIRouter()
 
 
-@router.get("/api/v1/templates/validate")
+@router.get("/api/v1/templates/{template_id}", response_model=TemplateSchema)
+async def get_template(
+    template_id: UUID,
+    template_repository: TemplateRepository = Depends(get_template_repository),
+    db: AsyncSession = Depends(get_db),
+    user: UserSchema = Depends(get_current_user),
+):
+    """
+    API GET to getting data from template
+    """
+
+    template = await template_repository.get_by_id(template_id)
+    if not template:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
+        )
+
+    return template
+
+
+@router.get("/api/v1/templates/{template_id}/config")
+async def get_template_config(
+    template_id: UUID,
+    template_repository: TemplateRepository = Depends(get_template_repository),
+    db: AsyncSession = Depends(get_db),
+    user: UserSchema = Depends(get_current_user),
+):
+    """
+    API GET to getting config from template
+    """
+
+    template = await template_repository.get_by_id(template_id)
+    if not template:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
+        )
+
+    template_schema = create_template_schema(template.config)  # type: ignore
+
+    return template_schema
+
+
+@router.post("/api/v1/templates/validate")
 async def template_validate(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
     user: UserSchema = Depends(get_current_user),
 ):
     """
-    API GET to Validate template
+    API post to validate template
     """
 
     try:
@@ -47,14 +92,14 @@ async def template_validate(
 
 @router.post("/api/v1/templates/{template_id}/run")
 async def template_run(
-    template_id: str,
+    template_id: UUID,
     parameters: dict,
     template_repository: TemplateRepository = Depends(get_template_repository),
     token: str = Depends(get_current_token),
     user: UserSchema = Depends(get_current_user),
 ):
     """
-    API POST to Run template
+    API POST to run template
     """
 
     template = await template_repository.get_by_id(template_id)
