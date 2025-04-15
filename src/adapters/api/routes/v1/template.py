@@ -1,23 +1,22 @@
 from uuid import UUID
 
-import yaml
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import ValidationError
-from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.adapters.api.schemas.template.template_factory_schema import (
+    get_template_factory,
+)
 from src.adapters.api.schemas.template_schema import TemplateSchema
 from src.adapters.api.schemas.user_schema import UserSchema
 from src.adapters.persistence.repositories.template_repository import (
-    TemplateRepository,
     get_template_repository,
 )
-from src.adapters.tasks.template_tasks import step_runner_task
-from src.domain.exceptions.template_exceptions import TemplateInvalidFileTypeException
+from src.adapters.tasks.dispatcher_tasks import get_template_step_runner_dispatcher
+from src.domain.services.template_get_config_service import TemplateGetConfigService
+from src.domain.services.template_get_service import TemplateGetService
 from src.domain.services.template_run_service import TemplateRunService
-from src.infrastructure.database import get_db
+from src.domain.services.template_validate_service import TemplateValidateService
 from src.utils.auth import get_current_token, get_current_user
-from src.utils.template_schema_factory import get_template_factory
-from src.utils.template_step_dispatcher import get_template_step_dispatcher
 
 router = APIRouter()
 
@@ -25,59 +24,70 @@ router = APIRouter()
 def get_template_run_service(
     template_repository=Depends(get_template_repository),
     template_parser=Depends(get_template_factory),
-    template_step_dispatcher=Depends(get_template_step_dispatcher),
+    template_step_runner_dispatcher=Depends(get_template_step_runner_dispatcher),
+    token: str = Depends(get_current_token),
 ):
     return TemplateRunService(
-        template_repository, template_parser, template_step_dispatcher
+        template_repository, template_parser, template_step_runner_dispatcher, token
     )
+
+
+def get_template_validate_service(
+    factory_schema=Depends(get_template_factory),
+):
+    return TemplateValidateService(factory_schema)
+
+
+def get_template_get_config_service(
+    template_repository=Depends(get_template_repository),
+):
+    return TemplateGetConfigService(template_repository)
+
+
+def get_template_get_service(
+    template_repository=Depends(get_template_repository),
+):
+    return TemplateGetService(template_repository)
 
 
 @router.get("/api/v1/templates/{template_id}", response_model=TemplateSchema)
 async def get_template(
     template_id: UUID,
-    template_repository: TemplateRepository = Depends(get_template_repository),
-    db: AsyncSession = Depends(get_db),
+    template_get_service: TemplateGetService = Depends(get_template_get_service),
     user: UserSchema = Depends(get_current_user),
 ):
     """
     API GET to getting data from template
     """
-
-    template = await template_repository.get_by_id(template_id)
-    if not template:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
-        )
-
-    return template
+    try:
+        return await template_get_service.handler(template_id)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.args[0])
 
 
 @router.get("/api/v1/templates/{template_id}/config")
 async def get_template_config(
     template_id: UUID,
-    template_repository: TemplateRepository = Depends(get_template_repository),
-    db: AsyncSession = Depends(get_db),
+    template_get_config_service: TemplateGetConfigService = Depends(
+        get_template_get_config_service
+    ),
     user: UserSchema = Depends(get_current_user),
 ):
     """
     API GET to getting config from template
     """
-
-    template = await template_repository.get_by_id(template_id)
-    if not template:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
-        )
-
-    template_schema = create_template_schema(template.config)  # type: ignore
-
-    return template_schema
+    try:
+        return await template_get_config_service.handler(template_id)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.args[0])
 
 
 @router.post("/api/v1/templates/validate")
 async def template_validate(
     file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
+    template_validate_service: TemplateValidateService = Depends(
+        get_template_validate_service
+    ),
     user: UserSchema = Depends(get_current_user),
 ):
     """
@@ -85,11 +95,7 @@ async def template_validate(
     """
 
     try:
-        if file.content_type == "text/yaml" or file.content_type == "text/yml":
-            parsed_file = yaml.safe_load(file.file.read())
-            # create_template_schema(parsed_file)
-        else:
-            raise TemplateInvalidFileTypeException
+        await template_validate_service.handler(file.content_type, file.file.read())
     except ValidationError as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=e.errors()
@@ -107,42 +113,15 @@ async def template_run(
     template_id: UUID,
     parameters: dict,
     template_run_service: TemplateRunService = Depends(get_template_run_service),
-    token: str = Depends(get_current_token),
     user: UserSchema = Depends(get_current_user),
 ):
     """
     API POST to run template
     """
 
-    await template_run_service.handler(str(template_id), parameters, token)
-
-    # template = await template_repository.get_by_id(template_id)
-    # if not template:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
-    #     )
-    #
-    # config: dict = template.config  # type: ignore
-
-    # template_schema = create_template_schema(config)
-    # required_fields = []
-    # for parameter in template_schema.spec.parameters:
-    #     if parameter.required:
-    #         required_fields.extend(parameter.required)
-    #
-    # missing_fields = []
-    # for required_field in required_fields:
-    #     if required_field not in parameters or not parameters[required_field]:
-    #         missing_fieldsgg.append(required_field)
-    #
-    # if missing_fields:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_400_BAD_REQUEST,
-    #         detail=f"Missing required field(s): {', '.join(missing_fields)}",
-    #     )
-
-    # steps = [step.model_dump() for step in template_schema.spec.steps]
-    #
-    # step_runner_task.delay(steps, parameters, token)
+    try:
+        await template_run_service.handler(template_id, parameters)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.args[0])
 
     return {"message": f"Successfully run template {template_id}"}
