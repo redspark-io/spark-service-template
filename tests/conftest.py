@@ -1,11 +1,12 @@
 import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from src.configs.database import Base
-from src.domain.entities.template import Template
+from src.adapters.persistence.entities.template import Template
+from src.infrastructure.database import Base
 
-
-TEST_DATABASE_URL = 'postgresql+asyncpg://postgres:postgres@localhost:5432/spark_template_test'
+TEST_DATABASE_URL = (
+    "postgresql+asyncpg://postgres:postgres@localhost:5432/spark_template_test"
+)
 
 
 @pytest.fixture(scope="session")
@@ -26,6 +27,7 @@ async def test_db():
         await conn.run_sync(Base.metadata.drop_all)
 
     await engine.dispose()
+
 
 @pytest.fixture
 def parserd_file_v1beta1():
@@ -121,7 +123,7 @@ async def test_template(test_db, parserd_file_v1beta2):
         title="Template Test",
         description="Template teste",
         origin="test",
-        config=parserd_file_v1beta2
+        config=parserd_file_v1beta2,
     )
     test_db.add(template)
 

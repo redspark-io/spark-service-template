@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from src.domain.entities.template import Template
+from src.domain.models.template import Template
 
 
 class TemplatePort(ABC):
