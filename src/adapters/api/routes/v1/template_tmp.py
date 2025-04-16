@@ -1,4 +1,6 @@
+from typing import Annotated
 from uuid import UUID
+import os  # Import necessário para manipular extensões de arquivos
 
 import yaml
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status, Form
@@ -35,7 +37,7 @@ async def get_templates(
 
 @router.post("/api/v1/templates", response_model=TemplateResponseSchema)
 async def create_template(
-    template: str = Form(...),
+    template:  Annotated[str, Form()],
     config: UploadFile = File(...),
     template_repository: TemplateRepository = Depends(get_template_repository),
 ):
@@ -48,7 +50,8 @@ async def create_template(
         template_schema = TemplateSchema(**template_data)
 
         # Verifica o tipo do arquivo
-        if config.content_type == "text/yaml" or config.content_type == "text/yml":
+        file_extension = os.path.splitext(config.filename)[1].lower()  # Obtém a extensão do arquivo
+        if file_extension in [".yaml", ".yml"]:
             parsed_file = yaml.safe_load(config.file.read())
             template_factory = TemplateSchemaFactory()
             template_factory.create(parsed_file)
