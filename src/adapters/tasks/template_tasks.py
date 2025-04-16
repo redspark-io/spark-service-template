@@ -3,7 +3,7 @@ import logging
 
 from src.adapters.api.schemas.template.v1beta1.enums.action import ActionEnum
 from src.adapters.clients.spark_service_hub_client import SparkServiceHubClient
-from src.domain.services.application_fetch_template import FetchTemplateService
+from src.domain.services.applications.application_fetch_template import FetchTemplateService
 from src.domain.services.applications.application_register_service import (
     ApplicationRegisterService,
 )
