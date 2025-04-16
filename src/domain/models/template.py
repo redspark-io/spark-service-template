@@ -1,15 +1,17 @@
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Optional
+from uuid import UUID
 
 
 @dataclass
 class Template:
-    id: str
     name: str
     title: str
     description: str
     origin: str
-    config: dict
+    config: Optional[dict] = None
+    id: Optional[UUID] = None
     repo_owner: Optional[str] = None
     repo_name: Optional[str] = None
     repo_organization: Optional[str] = None

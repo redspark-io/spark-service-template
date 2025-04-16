@@ -20,6 +20,20 @@ class TemplateRepository(TemplatePort):
         )
         return query.scalars().first()
 
+    async def get_all_templates(self) -> list[Template]:
+        query = await self.db.execute(select(Template))
+        return query.scalars().all()
+
+    async def create_template(self, template: Template) -> Template:
+        self.db.add(template)
+        await self.db.commit()
+        await self.db.refresh(template)
+        return template
+
+    async def delete_template(self, template: Template) -> Template:
+        await self.db.delete(template)
+        await self.db.commit()
+        return template
 
 def get_template_repository(db: AsyncSession = Depends(get_db)) -> TemplateRepository:
     return TemplateRepository(db)
