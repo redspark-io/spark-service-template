@@ -17,6 +17,7 @@ from src.adapters.persistence.repositories.template_repository import (
 from src.adapters.tasks.template_tasks import step_runner_task
 from src.domain.exceptions.template_exceptions import TemplateInvalidFileTypeException
 from src.adapters.persistence.entities.template import Template
+from src.domain.services.template_create_service import TemplateCreateService
 from src.domain.services.template_run_service import TemplateRunService
 from src.domain.services.template_validate_service import TemplateValidateService
 from src.infrastructure.database import get_db
@@ -28,6 +29,13 @@ def get_template_validate_service(
     factory_schema=Depends(get_template_factory),
 ):
     return TemplateValidateService(factory_schema)
+
+def get_template_create_service(
+    template_validate_service=Depends(get_template_validate_service),
+    template_repository=Depends(get_template_repository),
+):
+    return TemplateCreateService(template_validate_service, template_repository)
+
 
 @router.get("/api/v1/templates", response_model=list[TemplateResponseSchema])
 async def get_templates(
@@ -44,31 +52,15 @@ async def get_templates(
 async def create_template(
     template:  Annotated[str, Form()],
     file: UploadFile = File(...),
-    template_validate_service: TemplateValidateService = Depends(
-        get_template_validate_service
+    template_create_service: TemplateCreateService = Depends(
+        get_template_create_service
     ),
-    template_repository: TemplateRepository = Depends(get_template_repository),
 ):
     """
     API POST to creating a template
     """
-    try:
-        template_data = yaml.safe_load(template)
-        template_schema = TemplateSchema(**template_data)
 
-        template_model = Template(**template_schema.model_dump())
-        template_model.config = await template_validate_service.handler(file.content_type, file.file.read())
-        
-        created_template = await template_repository.create_template(template_model)
-        return created_template
-    except ValidationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=e.errors()
-        )
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.args[0])
-    finally:
-        file.file.close()
+    return await template_create_service.create_template(template, file)
 
 @router.delete("/api/v1/templates/{template_id}")
 async def delete_template(
