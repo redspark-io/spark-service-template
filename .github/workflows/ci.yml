@@ -1,0 +1,50 @@
+name: Docker Image
+
+on:
+  push:
+    branches:
+      - feat/PULL-202
+    paths-ignore:
+        - '.github/workflows/**'
+        - 'k8s/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    if: github.actor != 'github-actions'
+    runs-on: ubuntu-latest
+
+    env:
+      IMAGE_REPOSITORY: sparkregistry.azurecr.io/${{ github.repository }}/${{ vars.REPOSITORY }}:${{ github.run_id }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -f Dockerfile -t $IMAGE_REPOSITORY .
+
+      - name: Login ACR
+        uses: docker/login-action@v2
+        with:
+          registry: sparkregistry.azurecr.io
+          username: sparkregistry
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Push Docker Image
+        run: docker push $IMAGE_REPOSITORY
+
+      - name: Definir a Nova Tag da Imagem
+        run: echo "IMAGE_TAG=${{ github.run_id }}" >> $GITHUB_ENV
+  
+      - name: Atualizar Tag no kustomization.yaml
+        run: |
+          sed -i "s|newTag: .*|newTag: \"$IMAGE_TAG\"|g" k8s/overlays/dev/kustomization.yml
+          
+      - name: Commit e Push das Alterações
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git add k8s/overlays/dev/kustomization.yml
+          git commit -m "Atualiza tag da imagem para $IMAGE_TAG"
+          git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git HEAD:develop

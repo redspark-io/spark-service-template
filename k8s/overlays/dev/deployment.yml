@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-service-template
+  namespace: spark
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spark-service-template
+  template:
+    metadata:
+      labels:
+        app: spark-service-template
+    spec:
+      containers:
+      - name: spark-service-template
+        image: sparkregistry.azurecr.io/redspark-io/spark-service-template/spark-service-template:1.0
+        command: ["poetry", "run", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]
+        imagePullPolicy: Always
+        envFrom:
+        - configMapRef:
+            name: spark-service-template
+        - secretRef:
+            name: spark-service-template
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: 300Mi
+            cpu: "100m"
+          limits:
+            memory: 800Mi
+            cpu: "500m"
+
+      - name: spark-service-template-worker
+        image: sparkregistry.azurecr.io/redspark-io/spark-service-template/spark-service-template:1.0
+        command: ["poetry", "run", "celery", "-A", "src.worker", "worker", "-B", "-l", "info"]
+        imagePullPolicy: Always
+        envFrom:
+        - configMapRef:
+            name: spark-service-template
+        - secretRef:
+            name: spark-service-template
+        resources:
+          requests:
+            memory: 300Mi
+            cpu: "100m"
+          limits:
+            memory: 800Mi
+            cpu: "500m"
+      
