@@ -20,8 +20,8 @@ class TemplateValidateService:
         if not content_type or not file_content:
             raise TemplateInvalidFileTypeException
 
-        if content_type != "text/yaml" and content_type != "text/yml":
+        if content_type != "text/yaml" and content_type != "text/yml" and content_type != "application/yaml":
             raise TemplateInvalidFileTypeException
 
         parsed_file = yaml.safe_load(file_content)
-        await self.factory_schema_port.create(parsed_file)
+        return await self.factory_schema_port.create(parsed_file)

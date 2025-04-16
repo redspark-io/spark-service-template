@@ -18,11 +18,16 @@ from src.adapters.tasks.template_tasks import step_runner_task
 from src.domain.exceptions.template_exceptions import TemplateInvalidFileTypeException
 from src.adapters.persistence.entities.template import Template
 from src.domain.services.template_run_service import TemplateRunService
+from src.domain.services.template_validate_service import TemplateValidateService
 from src.infrastructure.database import get_db
 from src.utils.auth import get_current_token, get_current_user
 
 router = APIRouter()
 
+def get_template_validate_service(
+    factory_schema=Depends(get_template_factory),
+):
+    return TemplateValidateService(factory_schema)
 
 @router.get("/api/v1/templates", response_model=list[TemplateResponseSchema])
 async def get_templates(
@@ -38,46 +43,32 @@ async def get_templates(
 @router.post("/api/v1/templates", response_model=TemplateResponseSchema)
 async def create_template(
     template:  Annotated[str, Form()],
-    config: UploadFile = File(...),
+    file: UploadFile = File(...),
+    template_validate_service: TemplateValidateService = Depends(
+        get_template_validate_service
+    ),
     template_repository: TemplateRepository = Depends(get_template_repository),
 ):
     """
     API POST to creating a template
     """
     try:
-        # Converte a string JSON para um dicionário
         template_data = yaml.safe_load(template)
         template_schema = TemplateSchema(**template_data)
 
-        # Verifica o tipo do arquivo
-        file_extension = os.path.splitext(config.filename)[1].lower()  # Obtém a extensão do arquivo
-        if file_extension in [".yaml", ".yml"]:
-            parsed_file = yaml.safe_load(config.file.read())
-            template_factory = TemplateSchemaFactory()
-            template_factory.create(parsed_file)
-
-            # Cria o modelo de template
-            template_model = Template(**template_schema.model_dump())
-            template_model.config = await template_factory.create(parsed_file)  # Use o retorno do método create
-
-            # Salva no banco de dados
-            created_template = await template_repository.create_template(template_model)
-            return created_template
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid file type. Only YAML files are supported.",
-            )
+        template_model = Template(**template_schema.model_dump())
+        template_model.config = await template_validate_service.handler(file.content_type, file.file.read())
+        
+        created_template = await template_repository.create_template(template_model)
+        return created_template
     except ValidationError as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=e.errors()
         )
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e) if e.args else "An unexpected error occurred.",
-        )
-
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.args[0])
+    finally:
+        file.file.close()
 
 @router.delete("/api/v1/templates/{template_id}")
 async def delete_template(
