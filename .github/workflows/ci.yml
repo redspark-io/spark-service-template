@@ -4,9 +4,9 @@ on:
   push:
     branches:
       - feat/PULL-202
-    paths-ignore:
-        - '.github/workflows/**'
-        - 'k8s/**'
+    # paths-ignore:
+    #     - '.github/workflows/**'
+    #     - 'k8s/**'
   workflow_dispatch:
 
 jobs:
