@@ -47,4 +47,4 @@ jobs:
           git config --global user.name "GitHub Actions"
           git add k8s/overlays/dev/kustomization.yml
           git commit -m "Atualiza tag da imagem para $IMAGE_TAG"
-          git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git HEAD:develop
+          git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git HEAD:feat/PULL-202
