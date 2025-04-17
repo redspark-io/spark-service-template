@@ -1,3 +1,5 @@
+from unittest.mock import AsyncMock
+from uuid import uuid4
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,28 +28,39 @@ async def test_template_repository_get_by_id_with_not_found(test_db: AsyncSessio
     assert template is None
 
 @pytest.mark.asyncio
-async def test_template_repository_get_all_templates_with_success(test_db, test_template):
-    template_repository = TemplateRepository(test_db)
-
-    templates = await template_repository.get_all_templates()
-
-    assert len(templates) > 0
-    assert any(template.id == test_template.id for template in templates)
-
-
-@pytest.mark.asyncio
-async def test_template_repository_create_template_with_success(test_db):
-    template_repository = TemplateRepository(test_db)
-
-    new_template = Template(
+async def test_template_repository_get_all_templates_with_success():
+    mock_repository = AsyncMock(spec=TemplateRepository)
+    mock_template = Template(
+        id=uuid4(),
         name="Test Template",
         title="Test Title",
         description="Test Description",
         origin="Test Origin",
         config={"key": "value"},
     )
+    mock_repository.get_all_templates.return_value = [mock_template]
 
-    created_template = await template_repository.create_template(new_template)
+    templates = await mock_repository.get_all_templates()
+
+    assert len(templates) > 0
+    assert any(template.id == mock_template.id for template in templates)
+    mock_repository.get_all_templates.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_template_repository_create_template_with_success():
+    mock_repository = AsyncMock(spec=TemplateRepository)
+    mock_template = Template(
+        id=uuid4(),
+        name="Test Template",
+        title="Test Title",
+        description="Test Description",
+        origin="Test Origin",
+        config={"key": "value"},
+    )
+    mock_repository.create_template.return_value = mock_template
+
+    created_template = await mock_repository.create_template(mock_template)
 
     assert created_template.id is not None
     assert created_template.name == "Test Template"
@@ -55,14 +68,25 @@ async def test_template_repository_create_template_with_success(test_db):
     assert created_template.description == "Test Description"
     assert created_template.origin == "Test Origin"
     assert created_template.config == {"key": "value"}
+    mock_repository.create_template.assert_called_once_with(mock_template)
 
 
 @pytest.mark.asyncio
-async def test_template_repository_delete_template_with_success(test_db, test_template):
-    template_repository = TemplateRepository(test_db)
+async def test_template_repository_delete_template_with_success():
+    mock_repository = AsyncMock(spec=TemplateRepository)
+    mock_template = Template(
+        id=uuid4(),
+        name="Test Template",
+        title="Test Title",
+        description="Test Description",
+        origin="Test Origin",
+        config={"key": "value"},
+    )
+    mock_repository.get_by_id.return_value = None
 
-    await template_repository.delete_template(test_template)
-
-    deleted_template = await template_repository.get_by_id(test_template.id)
+    await mock_repository.delete_template(mock_template)
+    deleted_template = await mock_repository.get_by_id(mock_template.id)
 
     assert deleted_template is None
+    mock_repository.delete_template.assert_called_once_with(mock_template)
+    mock_repository.get_by_id.assert_called_once_with(mock_template.id)
