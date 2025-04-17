@@ -1,14 +1,11 @@
 from typing import Optional
 from uuid import UUID
-
 from fastapi import Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from src.adapters.persistence.entities.template import Template
 from src.domain.ports.template_port import TemplatePort
 from src.infrastructure.database import get_db
-
 
 class TemplateRepository(TemplatePort):
     def __init__(self, db: AsyncSession):
