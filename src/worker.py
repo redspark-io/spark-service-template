@@ -1,4 +1,4 @@
-from src.configs.celery import celery_app
+from src.infrastructure.celery import celery_app
 
 if __name__ == "__main__":
     celery_app.worker_main()

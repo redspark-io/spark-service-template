@@ -2,7 +2,7 @@ import logging
 
 from fastapi import FastAPI
 
-from src.adapters.entrypoints.rest.v1 import health_check, template
+from src.adapters.api.routes.v1 import health_check, template
 
 logger = logging.getLogger("uvicorn")
 

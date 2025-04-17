@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from src.domain.schemas.template.v1beta1.template import (
+from src.adapters.api.schemas.template.v1beta1.template import (
     TemplateSchema as TemplateSchemaV1Beta1,
 )
 

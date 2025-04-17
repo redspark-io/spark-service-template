@@ -2,7 +2,7 @@ import jwt
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 
-from src.domain.schemas.user_schema import UserSchema
+from src.adapters.api.schemas.user_schema import UserSchema
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
