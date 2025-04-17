@@ -13,6 +13,7 @@ from src.adapters.persistence.repositories.template_repository import (
 )
 from src.adapters.tasks.dispatcher_tasks import get_template_step_runner_dispatcher
 from src.domain.services.template_create_service import TemplateCreateService
+from src.domain.services.template_delete_service import TemplateDeleteService
 from src.domain.services.template_get_config_service import TemplateGetConfigService
 from src.domain.services.template_get_service import TemplateGetService
 from src.domain.services.template_run_service import TemplateRunService
@@ -58,16 +59,21 @@ def get_template_create_service(
 ):
     return TemplateCreateService(template_validate_service, template_repository)
 
+def get_template_delete_service(
+    template_repository=Depends(get_template_repository),
+):
+    return TemplateDeleteService(template_repository)
+
 
 @router.get("/api/v1/templates", response_model=list[TemplateResponseSchema])
 async def get_templates(
-    template_repository: TemplateRepository = Depends(get_template_repository),
+    template_get_service: TemplateGetService = Depends(get_template_get_service)
     # user: UserSchema = Depends(get_current_user)
 ):
     """
     API GET to getting templates
     """
-    return await template_repository.get_all_templates()
+    return await template_get_service.get_all_handler()
 
 
 @router.get("/api/v1/templates/{template_id}", response_model=TemplateSchema)
@@ -114,7 +120,7 @@ async def create_template(
     API POST to creating a template
     """
 
-    return await template_create_service.create_template(template, file)
+    return await template_create_service.handler(template, file)
 
 
 @router.post("/api/v1/templates/validate")
@@ -165,17 +171,12 @@ async def template_run(
 @router.delete("/api/v1/templates/{template_id}")
 async def delete_template(
     template_id: UUID,
-    template_repository: TemplateRepository = Depends(get_template_repository),
+    template_delete_service: TemplateDeleteService = Depends(get_template_delete_service),
     # user: UserSchema = Depends(get_current_user)
 ):
     """
     API DELETE to deleting a template
     """
-    template = await template_repository.get_by_id(template_id)
-    if not template:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
-        )
 
-    await template_repository.delete_template(template)
+    await template_delete_service.handler(template_id)
     return {"message": "Template deleted successfully"}

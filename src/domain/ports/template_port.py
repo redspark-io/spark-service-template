@@ -9,13 +9,13 @@ class TemplatePort(ABC):
         pass
 
     @abstractmethod
-    async def get_all_templates(self) -> list[Template]:
+    async def get_all(self) -> list[Template]:
         pass
 
     @abstractmethod
-    async def create_template(self, template: Template) -> Template:
+    async def create(self, template: Template) -> Template:
         pass
 
     @abstractmethod
-    async def delete_template(self, template: Template) -> Template:
+    async def delete(self, template: Template) -> Template:
         pass

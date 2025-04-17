@@ -15,7 +15,7 @@ class TemplateCreateService:
         self.template_validate_service = template_validate_service
         self.template_repository = template_repository
 
-    async def create_template(self, template: dict, file: UploadFile) -> Template:
+    async def handler(self, template: dict, file: UploadFile) -> Template:
         try:
             template_data = yaml.safe_load(template)
             template_schema = TemplateSchema(**template_data)
@@ -25,7 +25,7 @@ class TemplateCreateService:
                 file.content_type, file.file.read()
             )
 
-            created_template = await self.template_repository.create_template(
+            created_template = await self.template_repository.create(
                 template_model
             )
             return created_template
