@@ -17,17 +17,17 @@ class TemplateRepository(TemplatePort):
         )
         return query.scalars().first()
 
-    async def get_all_templates(self) -> list[Template]:
+    async def get_all(self) -> list[Template]:
         query = await self.db.execute(select(Template))
         return query.scalars().all()
 
-    async def create_template(self, template: Template) -> Template:
+    async def create(self, template: Template) -> Template:
         self.db.add(template)
         await self.db.commit()
         await self.db.refresh(template)
         return template
 
-    async def delete_template(self, template: Template) -> Template:
+    async def delete(self, template: Template) -> Template:
         await self.db.delete(template)
         await self.db.commit()
         return template
