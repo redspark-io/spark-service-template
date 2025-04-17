@@ -1,14 +1,11 @@
 from typing import Optional
 from uuid import UUID
-
 from fastapi import Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from src.adapters.persistence.entities.template import Template
 from src.domain.ports.template_port import TemplatePort
 from src.infrastructure.database import get_db
-
 
 class TemplateRepository(TemplatePort):
     def __init__(self, db: AsyncSession):
@@ -20,6 +17,20 @@ class TemplateRepository(TemplatePort):
         )
         return query.scalars().first()
 
+    async def get_all(self) -> list[Template]:
+        query = await self.db.execute(select(Template))
+        return query.scalars().all()
+
+    async def create(self, template: Template) -> Template:
+        self.db.add(template)
+        await self.db.commit()
+        await self.db.refresh(template)
+        return template
+
+    async def delete(self, template: Template) -> Template:
+        await self.db.delete(template)
+        await self.db.commit()
+        return template
 
 def get_template_repository(db: AsyncSession = Depends(get_db)) -> TemplateRepository:
     return TemplateRepository(db)

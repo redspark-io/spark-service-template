@@ -1,10 +1,9 @@
 from uuid import UUID
-
 from src.domain.exceptions.template_exceptions import TemplateNotFoundException
 from src.domain.ports.template_port import TemplatePort
 
 
-class TemplateGetService:
+class TemplateDeleteService:
     def __init__(
         self,
         template_repository: TemplatePort,
@@ -15,7 +14,4 @@ class TemplateGetService:
         template = await self.template_repository.get_by_id(template_id)
         if not template:
             TemplateNotFoundException()
-        return template
-    
-    async def get_all_handler(self):
-        return await self.template_repository.get_all()
+        return await self.template_repository.delete(template)
